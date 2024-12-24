@@ -28,3 +28,5 @@ docker compose up -d gitea_act_runner
 ```sh
 docker compose exec --user git gitea bash -c 'gitea admin user create --username gitea --password gitea --email gitea@example.com --admin'
 ```
+
+http://localhost:3000

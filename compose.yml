@@ -10,7 +10,7 @@ services:
       - GITEA__database__NAME=gitea
       - GITEA__database__USER=gitea
       - GITEA__database__PASSWD=gitea
-      - GITEA__server__ROOT_URL=${GITEA_ROOT_URL:-http://localhost/}
+      - GITEA__server__ROOT_URL=${GITEA_ROOT_URL:-http://localhost:3000/}
       - GITEA__security__INSTALL_LOCK=true
       # - GITEA__security__SECRET_KEY=${GITEA_SECRET_KEY:-}
       - GITEA__service__DISABLE_REGISTRATION=true # 登録を非表示にし管理者しか登録できなくする
