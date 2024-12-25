@@ -118,8 +118,9 @@ With the provided path, there will be 1 file uploaded
 ::error::@actions/artifact v2.0.0+, upload-artifact@v4+ and download-artifact@v4+ are not currently supported on GHES.
 ```
 
+.gitea/workflows/demo3.yaml
 ```yaml
-name: Gitea Actions workflow_dispatch Example
+name: Gitea Actions upload-artifact Example
 
 on:
   workflow_dispatch:
@@ -129,38 +130,44 @@ on:
         type: environment
         required: true
         default: 'これはデフォルト値です'
-      number_1:
-        description: '数値入力のテスト'
-        type: number
-        required: true
-        default: '100'
-      boolean_1:
-        description: 'チェックボックスのテスト'
-        type: boolean
-        required: false
-      choice_1:
-        description: 'コンボボックスのテスト'
-        type: choice
-        required: true
-        options:
-          - アイテム1
-          - アイテム2
-          - アイテム3
-        default: 'アイテム2'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - run: echo テキスト入力のテスト = ${{ inputs.environment_1 }} > output.txt
-      - run: echo 数値入力のテスト = ${{ inputs.number_1 }} > output.txt
-      - run: echo チェックボックスのテスト = ${{ inputs.boolean_1 }} > output.txt
-      - run: echo コンボボックスのテスト = ${{ inputs.choice_1 }} > output.txt
       - uses: actions/upload-artifact@v4
         with:
           name: my-artifact
           path: output.txt
 ```
 
-TODO
-* 2回目以降の up.sh の実行でランナーの登録やユーザーの登録をスキップする
+v4 は無理そうなので actions/upload-artifact@v3 で
+
+.gitea/workflows/demo4.yaml
+```yaml
+name: Gitea Actions upload-artifact Example
+
+on:
+  workflow_dispatch:
+    
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo あいうえお > output.txt
+      - uses: actions/upload-artifact@v3
+        env:
+          ACTIONS_RESULTS_URL: http://gitea:3000/api/actions_pipeline/
+        with:
+          name: my-artifact
+          path: output.txt
+```
+
+Pipeline Artifact API provides upload action with external app URL  
+https://github.com/go-gitea/gitea/issues/32554  
+* upload-artifact が gitea 本体にアーティファクトのアップロード先を要求する
+* gitea がアップロード先を用意しそのURLを返すが、そのURLがDockerネットワーク内のURLではなく外部からのURLになっている
+* upload-artifact が gitea から受け取ったアップロード先のURLにアクセスするが、upload-artifact を実行しているコンテナからは外部のURLでアクセスできないのでアップロードに失敗する
+* 現状、gitea が返すURLを変更することはできない
+* リバースプロキシーを適切に設置すれば、ギリギリなんとかなるらしい？ 
