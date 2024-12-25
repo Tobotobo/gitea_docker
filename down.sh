@@ -30,38 +30,5 @@ if [[ -f ".env" ]]; then
     set +a
 fi
 
-# ネットワークが作成されていない場合は作成
-network_name="gitea_network"
-if ! docker network ls --format '{{.Name}}' | grep -q "^${network_name}$"; then
-  docker network create "${network_name}"
-fi
-
-# Gitea を先に起動
-docker compose up -d gitea gitea_db
-
-# 起動するまで最大 30 秒待機
-docker compose exec --user git gitea bash -c '
-timeout=30
-elapsed=0
-while ! curl -f 127.0.0.1:3000/api/healthz >/dev/null 2>&1; do
-  if [ $elapsed -ge $timeout ]; then
-    echo "Service did not become available within $timeout seconds."
-    exit 1
-  fi
-  echo "Waiting for service to be available... ($elapsed/$timeout seconds)"
-  sleep 2
-  elapsed=$((elapsed + 2))
-done
-echo "Service is now available."
-'
-
-# Gitea Actions ランナーのトークンを取得
-export GITEA_RUNNER_REGISTRATION_TOKEN=$(docker compose exec --user git gitea bash -c 'gitea actions generate-runner-token')
-
-# Gitea Actions のランナーを起動 & 登録
-docker compose up -d gitea_act_runner
-
-# 初期管理者ユーザーの登録
-docker compose exec --user git gitea bash -c '
-gitea admin user create --username gitea --password gitea --email gitea@example.com --admin
-'
+# コンテナを破棄 ※ボリュームは破棄しない≒リポジトリなどのデータは破棄しない
+docker compose down

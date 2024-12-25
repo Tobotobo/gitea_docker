@@ -1,0 +1,4 @@
+# https://gitea.com/gitea/act_runner/src/branch/main/internal/pkg/config/config.example.yaml
+
+container:
+  network: "gitea_network"
