@@ -30,6 +30,13 @@ if [[ -f ".env" ]]; then
     set +a
 fi
 
+# 確認
+read -p "データが削除されます。よろしいですか？ (y/n): " confirm
+if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    echo "処理を中止しました。"
+    exit
+fi
+
 # コンテナをボリュームを含め破棄
 docker compose down -v
 

@@ -69,6 +69,7 @@ jobs:
 Actions support workflow dispatch event  
 https://github.com/go-gitea/gitea/pull/28163  
 
+.gitea/workflows/demo2.yaml
 ```yaml
 name: Gitea Actions workflow_dispatch Example
 

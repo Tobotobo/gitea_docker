@@ -55,13 +55,21 @@ done
 echo "Service is now available."
 '
 
-# Gitea Actions ランナーのトークンを取得
-export GITEA_RUNNER_REGISTRATION_TOKEN=$(docker compose exec --user git gitea bash -c 'gitea actions generate-runner-token')
+# 現在のユーザー数を取得 ※ユーザーが未登録の状態
+user_count=$(docker compose exec --user git gitea bash -c 'echo "$(gitea admin user list)" | tail -n +2 | wc -l')
+
+# 初回のみ実行 ※ユーザーが未登録の状態を初回実行と見なす
+if [ "$user_count" -eq 0 ]; then
+
+  # 初期管理者ユーザーを登録
+  docker compose exec --user git gitea bash -c '
+  gitea admin user create --username gitea --password gitea --email gitea@example.com --admin
+  '
+
+  # Gitea Actions ランナーのトークンを取得
+  export GITEA_RUNNER_REGISTRATION_TOKEN=$(docker compose exec --user git gitea bash -c 'gitea actions generate-runner-token')
+
+fi
 
 # Gitea Actions のランナーを起動 & 登録
 docker compose up -d gitea_act_runner
-
-# 初期管理者ユーザーの登録
-docker compose exec --user git gitea bash -c '
-gitea admin user create --username gitea --password gitea --email gitea@example.com --admin
-'
