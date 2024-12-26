@@ -37,7 +37,7 @@ if ! docker network ls --format '{{.Name}}' | grep -q "^${network_name}$"; then
 fi
 
 # Gitea を先に起動
-docker compose up -d gitea gitea_db
+docker compose up -d nginx gitea gitea_db
 
 # 起動するまで最大 30 秒待機
 docker compose exec --user git gitea bash -c '
@@ -55,7 +55,7 @@ done
 echo "Service is now available."
 '
 
-# 現在のユーザー数を取得 ※ユーザーが未登録の状態
+# 現在のユーザー数を取得
 user_count=$(docker compose exec --user git gitea bash -c 'echo "$(gitea admin user list)" | tail -n +2 | wc -l')
 
 # 初回のみ実行 ※ユーザーが未登録の状態を初回実行と見なす

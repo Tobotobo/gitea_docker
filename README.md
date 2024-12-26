@@ -157,8 +157,6 @@ jobs:
     steps:
       - run: echo あいうえお > output.txt
       - uses: actions/upload-artifact@v3
-        env:
-          ACTIONS_RESULTS_URL: http://gitea:3000/api/actions_pipeline/
         with:
           name: my-artifact
           path: output.txt
@@ -171,3 +169,38 @@ https://github.com/go-gitea/gitea/issues/32554
 * upload-artifact が gitea から受け取ったアップロード先のURLにアクセスするが、upload-artifact を実行しているコンテナからは外部のURLでアクセスできないのでアップロードに失敗する
 * 現状、gitea が返すURLを変更することはできない
 * リバースプロキシーを適切に設置すれば、ギリギリなんとかなるらしい？ 
+
+
+https://github.com/go-gitea/gitea/blob/main/modules/httplib/url.go#L61
+```go
+// GuessCurrentHostURL は現在の完全なホストURL（サブパスなし）をHTTPヘッダーを使用して推測しようとします。URLの末尾にはスラッシュは含まれません。
+func GuessCurrentHostURL(ctx context.Context) string {
+    // コンテキストからHTTPリクエストを取得
+    req, ok := ctx.Value(RequestContextKey).(*http.Request)
+    if !ok {
+        // リクエストがない場合は、設定されたAppURLを使用
+        return strings.TrimSuffix(setting.AppURL, setting.AppSubURL+"/")
+    }
+
+    // リバースプロキシがスキームを提供していない場合、AppURLを推測せず、設定されたものを使用します。
+    // 現在、サイト管理者がプロキシヘッダーを正しく設定していない場合、Giteaは誤った推測を行う可能性があります。
+    // 以下のようなケースがあります：
+    // 1. リバースプロキシが正しく設定されており、"X-Forwarded-Proto/Host" ヘッダーを渡している場合。これが理想的なケースで、Giteaは正しく処理できます。
+    // 2. リバースプロキシが正しく設定されていない場合。"X-Forwarded-Proto/Host" ヘッダーを渡さない例として、Nginxで "proxy_pass http://gitea:3000" のみが設定されている場合。
+    // 3. リバースプロキシが存在しない場合。
+    // Giteaは追加の設定オプションがないと、ケース2とケース3を区別することが不可能です。
+    // その結果、ケース2では推測が誤り、例えば "http://gitea:3000/" のようにエンドユーザーがアクセスできないURLを推測してしまう可能性があります。
+    // 将来的には、新しい設定オプションを導入して、サイト管理者がAppURLの推測方法を決定できるようにする必要があるかもしれません。
+
+    reqScheme := getRequestScheme(req)
+    if reqScheme == "" {
+        // スキームがない場合は設定されたAppURLを使用
+        return strings.TrimSuffix(setting.AppURL, setting.AppSubURL+"/")
+    }
+
+    // "X-Forwarded-Host" は以下のような問題があります：
+    // 標準化されていない、不明確（X-Forwarded-Portを含むかどうかなど）、Hostヘッダーとの競合。
+    // そのため、"X-Forwarded-Host" は使用せず、Hostヘッダーを直接使用します。
+    return reqScheme + "://" + req.Host
+}
+```
