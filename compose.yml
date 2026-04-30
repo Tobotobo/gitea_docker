@@ -1,0 +1,78 @@
+networks:
+  gitea_network:
+    external: true
+
+volumes:
+  gitea_data:
+  gitea_db_data:
+  gitea_act_runner_data:
+
+services:
+  gitea:
+    image: docker.gitea.com/gitea:1.26.1
+    # container_name: gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=gitea_db:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=gitea
+
+      # - GITEA__server__ROOT_URL=http://gitea:3000/
+      - GITEA__server__ROOT_URL=${GITEA_ROOT_URL:-http://localhost:3000/} # 外からアクセスする際の URL ※一致していないと警告が出る
+      - GITEA__security__INSTALL_LOCK=true # インストール画面をロック≒初回設定画面をデフォルト値で設定したことにしてスキップ
+      - GITEA__service__DISABLE_REGISTRATION=true # 登録ボタンを非表示にし管理者しか登録できなくする
+      # - GITEA__service__REQUIRE_SIGNIN_VIEW=true # ログインを必須にする ※未ログインでは閲覧不可になる
+      - GITEA__repository.upload__FILE_MAX_SIZE=300
+      - GITEA__repository.upload__MAX_FILES=50
+
+      - GITEA_RUNNER_REGISTRATION_TOKEN_FILE=/runner-token
+    restart: unless-stopped
+    networks:
+      - gitea_network
+    volumes:
+      - gitea_data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - ./runner-token:/runner-token:ro
+    ports:
+      - "${GITEA_WEB_PORT:-3000}:3000"
+      # - "${GITEA_SSH_PORT:-2222}:22"
+    depends_on:
+      - gitea_db
+
+  gitea_db:
+    image: docker.io/library/postgres:14
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=gitea
+      - POSTGRES_PASSWORD=gitea
+      - POSTGRES_DB=gitea
+    networks:
+      - gitea_network
+    volumes:
+      - gitea_db_data:/var/lib/postgresql/data
+
+  gitea_act_runner:
+    # https://hub.docker.com/r/gitea/act_runner/tags
+    image: gitea/act_runner:0.6.0
+    # image: gitea/act_runner:nightly
+    environment:
+      - GITEA_INSTANCE_URL=http://gitea:3000/
+      # - GITEA_RUNNER_REGISTRATION_TOKEN=${GITEA_RUNNER_REGISTRATION_TOKEN:-dummy}
+      - GITEA_RUNNER_NAME=gitea_act_runner
+      - CONFIG_FILE=/config.yaml
+      - GITEA_RUNNER_REGISTRATION_TOKEN_FILE=/runner-token
+    networks:
+      - gitea_network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - gitea_act_runner_data:/data
+      - ./gitea_act_runner_config.yaml:/config.yaml
+      - ./runner-token:/runner-token:ro
+    restart: unless-stopped
+    depends_on:
+      - gitea
